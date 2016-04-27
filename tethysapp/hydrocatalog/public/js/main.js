@@ -6,13 +6,15 @@ var rasterLayer = new ol.layer.Tile({
     source: new ol.source.MapQuest({layer: 'osm'})
 });
 
+//The gauge layers can be changed to layer.Image instead of layer.Tile (and .ImageWMS instead of .TileWMS) for a single tile
 var AHPS_Gauges = new ol.layer.Tile({
     source: new ol.source.TileWMS({
         url:'http://geoserver.byu.edu/arcgis/services/NWC/AHPS_Gauges/MapServer/WmsServer?',
         params:{
             LAYERS:"0",
 //            FORMAT:"image/png", //Not a necessary line, but maybe useful if needed later
-        }
+        },
+        crossOrigin: 'Anonymous' //This is necessary for CORS security in the browser
         })
     }); //Thanks to http://jsfiddle.net/GFarkas/tr0s6uno/ for getting the layer working
 
@@ -22,7 +24,8 @@ var USGS_Gauges = new ol.layer.Tile({
         params:{
             LAYERS:"0",
 //            FORMAT:"image/png", //Not a necessary line, but maybe useful if needed later
-        }
+        },
+        crossOrigin: 'Anonymous'
         })
     }); //Thanks to http://jsfiddle.net/GFarkas/tr0s6uno/ for getting the layer working
 
@@ -43,7 +46,6 @@ var map = new ol.Map({
     })
 });
 
-
 var element = document.getElementById('popup');
 
 var popup = new ol.Overlay({
@@ -54,49 +56,89 @@ var popup = new ol.Overlay({
 
 map.addOverlay(popup);
 
+
+
+
+
+
 // display popup on click
+//map.on('click', function(evt) {
+//  //try to destroy it before doing anything else...s
+//  $(element).popover('destroy');
+//  var clickCoord = evt.coordinate;
+//
+//  //Try to get a feature at the point of interest
+//  var feature = map.forEachFeatureAtPixel(evt.pixel,
+//      function(feature, layer) {
+//        return feature;
+//      });
+//
+//  //if we found a feature then create and show the popup.
+//  if (feature) {
+//    popup.setPosition(clickCoord);
+//    if (feature.get('name') == "0") {
+//    var displaycontent = "This is a common Underground Railroad Route";
+//    }
+//    else {
+//    var displaycontent = feature.get('description');
+//    }
+//
+//    $(element).popover({
+//      'placement': 'top',
+//      'html': true,
+//      'content': displaycontent
+//    });
+//
+//    $(element).popover('show');
+//
+//  } else {
+//    $(element).popover('destroy');
+//  }
+//});
 
-map.on('click', function(evt) {
-  //try to destroy it before doing anything else...s
-  $(element).popover('destroy');
-  var clickCoord = evt.coordinate;
-
-  //Try to get a feature at the point of interest
-  var feature = map.forEachFeatureAtPixel(evt.pixel,
-      function(feature, layer) {
-        return feature;
-      });
-
-  //if we found a feature then create and show the popup.
-  if (feature) {
-    popup.setPosition(clickCoord);
-    if (feature.get('name') == "0") {
-    var displaycontent = "This is a common Underground Railroad Route";
+  map.on('singleclick', function(evt) {
+    document.getElementById('info').innerHTML = '';
+    var viewResolution = (view.getResolution());
+    var url = wmsSource.getGetFeatureInfoUrl(
+        evt.coordinate, viewResolution, 'EPSG:3857',
+        {'INFO_FORMAT': 'text/html'});
+    if (url) {
+      document.getElementById('info').innerHTML =
+          '<iframe seamless src="' + url + '"></iframe>';
     }
-    else {
-    var displaycontent = feature.get('description');
-    }
+  });
 
-    $(element).popover({
-      'placement': 'top',
-      'html': true,
-      'content': displaycontent
+
+
+
+
+
+
+  map.on('pointermove', function(evt) {
+    if (evt.dragging) {
+      return;
+    }
+    var pixel = map.getEventPixel(evt.originalEvent);
+    var hit = map.forEachLayerAtPixel(pixel, function(layer) {
+    if (layer != rasterLayer){
+      return true;}
+    });
+    map.getTargetElement().style.cursor = hit ? 'pointer' : '';
+  });
+
+//This function is ran to set a listener to update the map size when the navigation pane is opened or closed
+(function () {
+    var target, observer, config;
+    // select the target node
+    target = $('#app-content-wrapper')[0];
+
+    observer = new MutationObserver(function () {
+        window.setTimeout(function () {
+            map.updateSize();
+        }, 500);
     });
 
-    $(element).popover('show');
+    config = {attributes: true};
 
-  } else {
-    $(element).popover('destroy');
-  }
-});
-
-// change mouse cursor when over marker
-map.on('pointermove', function(e) {
-  if (e.dragging) {
-    $(element).popover('destroy');
-    return;
-  }
-  var pixel = map.getEventPixel(e.originalEvent);
-  var hit = map.hasFeatureAtPixel(pixel);
-  map.getTarget().style.cursor = hit ? 'pointer' : '';
-});
+    observer.observe(target, config);
+}());
