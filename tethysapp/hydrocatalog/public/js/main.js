@@ -30,8 +30,13 @@ var USGS_Gauges = new ol.layer.Tile({
     }); //Thanks to http://jsfiddle.net/GFarkas/tr0s6uno/ for getting the layer working
 
     layers = [rasterLayer,AHPS_Gauges, USGS_Gauges];
-
+    var view = new ol.View({
+            center: [-11500000, 4735000],
+            projection: projection,
+            zoom: 4
+        })
 //Declare the map object itself.
+
 var map = new ol.Map({
     target: document.getElementById("map"),
 
@@ -39,11 +44,7 @@ var map = new ol.Map({
     layers: layers,
 
     //Establish the view area. Note the reprojection from lat long (EPSG:4326) to Web Mercator (EPSG:3857)
-    view: new ol.View({
-        center: [-11500000, 4735000],
-        projection: projection,
-        zoom: 4
-    })
+    view: view,
 });
 
 var element = document.getElementById('popup');
@@ -60,22 +61,24 @@ map.addOverlay(popup);
 
 
 
-
+/*
 // display popup on click
-//map.on('click', function(evt) {
-//  //try to destroy it before doing anything else...s
-//  $(element).popover('destroy');
-//  var clickCoord = evt.coordinate;
-//
-//  //Try to get a feature at the point of interest
+map.on('click', function(evt) {
+  //try to destroy it before doing anything else...s
+  $(element).popover('destroy');
+  var clickCoord = evt.coordinate;
+
+  //Try to get a feature at the point of interest
 //  var feature = map.forEachFeatureAtPixel(evt.pixel,
 //      function(feature, layer) {
 //        return feature;
 //      });
-//
-//  //if we found a feature then create and show the popup.
+
+  //if we found a feature then create and show the popup.
 //  if (feature) {
-//    popup.setPosition(clickCoord);
+    if (map.getTargetElement().style.cursor == "pointer"){
+    popup.setPosition(clickCoord);
+
 //    if (feature.get('name') == "0") {
 //    var displaycontent = "This is a common Underground Railroad Route";
 //    }
@@ -83,31 +86,54 @@ map.addOverlay(popup);
 //    var displaycontent = feature.get('description');
 //    }
 //
-//    $(element).popover({
-//      'placement': 'top',
-//      'html': true,
-//      'content': displaycontent
-//    });
+    var displaycontent = 'Yay'
+    $(element).popover({
+      'placement': 'top',
+      'html': true,
+      'content': displaycontent
+    });
 //
-//    $(element).popover('show');
+    $(element).popover('show');
 //
 //  } else {
 //    $(element).popover('destroy');
-//  }
-//});
+  }
+});
 
-  map.on('singleclick', function(evt) {
-    document.getElementById('info').innerHTML = '';
-    var viewResolution = (view.getResolution());
-    var url = wmsSource.getGetFeatureInfoUrl(
-        evt.coordinate, viewResolution, 'EPSG:3857',
-        {'INFO_FORMAT': 'text/html'});
-    if (url) {
-      document.getElementById('info').innerHTML =
-          '<iframe seamless src="' + url + '"></iframe>';
-    }
-  });
+//  map.on('singleclick', function(evt) {
+//    document.getElementById('info').innerHTML = '';
+//    var viewResolution = (view.getResolution());
+//    var url = wmsSource.getGetFeatureInfoUrl(
+//        evt.coordinate, viewResolution, 'EPSG:3857',
+//        {'INFO_FORMAT': 'text/html'});
+//    if (url) {
+//      document.getElementById('info').innerHTML =
+//          '<iframe seamless src="' + url + '"></iframe>';
+//    }
+//  });
+*/
 
+
+map.on('singleclick', function(evt) {
+    $(element).popover('destroy');
+        if (map.getTargetElement().style.cursor == "pointer"){
+
+            var clickCoord = evt.coordinate;
+            popup.setPosition(clickCoord);
+
+            document.getElementById('popup').innerHTML = "Loading... please wait...";
+            var view = map.getView();
+            var viewResolution = view.getResolution();
+            var source = AHPS_Gauges.get('visible') ? AHPS_Gauges.getSource() : USGS_Gauges.getSource();
+            var url = source.getGetFeatureInfoUrl(
+              evt.coordinate, viewResolution, view.getProjection(),
+              {'INFO_FORMAT': 'text/html', 'FEATURE_COUNT': 50});
+            if (url) {
+        //      console.log(url)
+              document.getElementById('popup').innerHTML = '<iframe src="' + url + '"></iframe>';
+            }
+        }
+    });
 
 
 
@@ -135,7 +161,7 @@ map.addOverlay(popup);
     observer = new MutationObserver(function () {
         window.setTimeout(function () {
             map.updateSize();
-        }, 500);
+        }, 350);
     });
 
     config = {attributes: true};
