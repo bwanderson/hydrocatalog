@@ -1,49 +1,57 @@
 //Here we are declaring the projection object for Web Mercator
 var projection = ol.proj.get('EPSG:3857');
 
+//Define Basemap
 //Here we are declaring the raster layer as a separate object to put in the map later
-var rasterLayer = new ol.layer.Tile({
+var baseLayer = new ol.layer.Tile({
     source: new ol.source.MapQuest({layer: 'osm'})
 });
 
-//The gauge layers can be changed to layer.Image instead of layer.Tile (and .ImageWMS instead of .TileWMS) for a single tile
-var AHPS_Gauges = new ol.layer.Tile({
-    source: new ol.source.TileWMS({
+//Define all WMS Sources:
+
+var AHPS_Source =  new ol.source.TileWMS({
         url:'http://geoserver.byu.edu/arcgis/services/NWC/AHPS_Gauges/MapServer/WmsServer?',
         params:{
             LAYERS:"0",
 //            FORMAT:"image/png", //Not a necessary line, but maybe useful if needed later
         },
         crossOrigin: 'Anonymous' //This is necessary for CORS security in the browser
-        })
-    }); //Thanks to http://jsfiddle.net/GFarkas/tr0s6uno/ for getting the layer working
+        });
 
-var USGS_Gauges = new ol.layer.Tile({
-    source: new ol.source.TileWMS({
+var USGS_Source =  new ol.source.TileWMS({
         url:'http://geoserver.byu.edu/arcgis/services/NWC/USGS_Gauges/MapServer/WmsServer?',
         params:{
             LAYERS:"0",
 //            FORMAT:"image/png", //Not a necessary line, but maybe useful if needed later
         },
         crossOrigin: 'Anonymous'
-        })
+        });
+
+
+//Define all WMS layers
+//The gauge layers can be changed to layer.Image instead of layer.Tile (and .ImageWMS instead of .TileWMS) for a single tile
+var AHPS_Gauges = new ol.layer.Tile({
+    source:AHPS_Source
     }); //Thanks to http://jsfiddle.net/GFarkas/tr0s6uno/ for getting the layer working
 
-    layers = [rasterLayer,AHPS_Gauges, USGS_Gauges];
-    var view = new ol.View({
-            center: [-11500000, 4735000],
-            projection: projection,
-            zoom: 4
-        })
-//Declare the map object itself.
+var USGS_Gauges = new ol.layer.Tile({
+    source:USGS_Source
+    }); //Thanks to http://jsfiddle.net/GFarkas/tr0s6uno/ for getting the layer working
 
+sources = [AHPS_Source,USGS_Source];
+layers = [baseLayer,AHPS_Gauges, USGS_Gauges];
+
+//Establish the view area. Note the reprojection from lat long (EPSG:4326) to Web Mercator (EPSG:3857)
+var view = new ol.View({
+        center: [-11500000, 4735000],
+        projection: projection,
+        zoom: 4
+    })
+
+//Declare the map object itself.
 var map = new ol.Map({
     target: document.getElementById("map"),
-
-    //Set up the layers that will be loaded in the map
     layers: layers,
-
-    //Establish the view area. Note the reprojection from lat long (EPSG:4326) to Web Mercator (EPSG:3857)
     view: view,
 });
 
@@ -121,16 +129,22 @@ map.on('singleclick', function(evt) {
             var clickCoord = evt.coordinate;
             popup.setPosition(clickCoord);
 
-            document.getElementById('popup').innerHTML = "Loading... please wait...";
             var view = map.getView();
             var viewResolution = view.getResolution();
             var source = AHPS_Gauges.get('visible') ? AHPS_Gauges.getSource() : USGS_Gauges.getSource();
-            var url = source.getGetFeatureInfoUrl(
-              evt.coordinate, viewResolution, view.getProjection(),
-              {'INFO_FORMAT': 'text/html', 'FEATURE_COUNT': 50});
+            var url = source.getGetFeatureInfoUrl(evt.coordinate, viewResolution, view.getProjection(),
+              {'INFO_FORMAT': 'application/json', 'FEATURE_COUNT': 50});
             if (url) {
         //      console.log(url)
-              document.getElementById('popup').innerHTML = '<iframe src="' + url + '"></iframe>';
+        //      document.getElementById('popup').innerHTML = '<iframe src="' + url + '"></iframe>';
+                
+
+                $(element).popover({
+                'placement': 'top',
+                'html': true,
+                'content': url
+                  });
+                  $(element).popover('show');
             }
         }
     });
@@ -146,7 +160,7 @@ map.on('singleclick', function(evt) {
     }
     var pixel = map.getEventPixel(evt.originalEvent);
     var hit = map.forEachLayerAtPixel(pixel, function(layer) {
-    if (layer != rasterLayer){
+    if (layer != baseLayer){
       return true;}
     });
     map.getTargetElement().style.cursor = hit ? 'pointer' : '';
