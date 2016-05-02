@@ -77,7 +77,7 @@ map.on('singleclick', function(evt) {
             var viewResolution = view.getResolution();
             var source = AHPS_Gauges.get('visible') ? AHPS_Gauges.getSource() : USGS_Gauges.getSource();
             var url = source.getGetFeatureInfoUrl(evt.coordinate, viewResolution, view.getProjection(),
-              {'INFO_FORMAT': 'text/html', 'FEATURE_COUNT': 50});
+              {'INFO_FORMAT': 'text/xml', 'FEATURE_COUNT': 50});
 
                 if (url) {
         //      console.log(url)
@@ -88,17 +88,42 @@ map.on('singleclick', function(evt) {
 //                  dataType: 'html'
                 }).then(function(response) {
 //                console.log(response);
-                var start = response.indexOf('<h5>');
-                var end = response.indexOf('</h5>');
-                response = response.substring(0,start-1)+response.substring(end+5)
+
+//                The following 3 lines are to remove the included header if an html is returned
+//                var start = response.indexOf('<h5>');
+//                var end = response.indexOf('</h5>');
+//                response = response.substring(0,start-1)+response.substring(end+5)
+
+//                The following console.log commands were used in determining how to parse the returned XML
 //                console.log(response);
-//                var heading = response.getElementById("h5");
-//                response = heading.parentNode.removeChild(heading);
+//                console.log(response.documentElement);
+//                console.log(response.documentElement.nodeName);
+//                console.log(response.documentElement.childElementCount);
+//                console.log(response.documentElement.children);
+//                console.log(response.documentElement.children[0].attributes['GaugeLID'].value);
+
+//                var displayContent = "Gauge ID     Waterbody     Link\n";
+                var displayContent = '<table border="1"><tbody><tr><th>Gauge ID</th><th>Waterbody</th><th>Link</th></tr>'
+
+                var xmlResponse = response.documentElement
+                var gaugesSelected = xmlResponse.childElementCount;
+//                console.log(gaugesSelected);
+                for (i = 0; i < gaugesSelected; i++) {
+                    var gaugeID = xmlResponse.children[i].attributes['GaugeLID'].value;
+                    var waterbody = xmlResponse.children[i].attributes['Waterbody'].value;
+                    var urlLink = xmlResponse.children[i].attributes['URL'].value;
+//                    console.log(gaugeID);
+//                    displayContent += gaugeID +'  '+ waterbody + '   Go to Website'.link(urlLink)+'\n';
+//                    displayContent += gaugeID +'  '+ waterbody + '<a href="'+urlLink+'" target="_blank">     Go to Website</a>'+'\n';
+                    displayContent += '<tr><td>'+gaugeID +'</td><td>'+ waterbody + '</td><td><a href="'+urlLink+'" target="_blank">Go to Website</a></td></tr>';
+
+                    }
+                    displayContent += '</table>';
 
                 $(element).popover({
                 'placement': 'top',
                 'html': true,
-                'content': response
+                'content': displayContent
                   });
                 $(element).popover('show');
                 });
