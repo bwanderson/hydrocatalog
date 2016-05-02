@@ -1,3 +1,17 @@
+
+function dataCall(inputURL) {
+    var result = null;
+        $.ajax({
+        url: inputURL,
+        async: false,
+        }).then(function(response) {
+            result = response;
+        });
+        return result;
+}
+
+
+
 //Here we are declaring the projection object for Web Mercator
 var projection = ol.proj.get('EPSG:3857');
 
@@ -66,6 +80,98 @@ var popup = new ol.Overlay({
 map.addOverlay(popup);
 
 
+
+
+map.on('singleclick', function(evt) {
+    $(element).popover('destroy');
+        if (map.getTargetElement().style.cursor == "pointer"){
+
+            var clickCoord = evt.coordinate;
+            popup.setPosition(clickCoord);
+
+            var view = map.getView();
+            var viewResolution = view.getResolution();
+//            var source = AHPS_Gauges.get('visible') ? AHPS_Gauges.getSource() : USGS_Gauges.getSource();
+//            var source = AHPS_Source;
+
+// NEED TO MAKE THIS ONLY CREATE URL IF NECESSARY!!!
+            var AHPS_url = AHPS_Source.getGetFeatureInfoUrl(evt.coordinate, viewResolution, view.getProjection(),
+              {'INFO_FORMAT': 'text/xml', 'FEATURE_COUNT': 50});
+            var USGS_url = USGS_Source.getGetFeatureInfoUrl(evt.coordinate, viewResolution, view.getProjection(),
+              {'INFO_FORMAT': 'text/xml', 'FEATURE_COUNT': 50});
+
+            var displayContent = '<table border="1"><tbody><tr><th>Gauge ID</th><th>Waterbody</th><th>Link</th></tr>';
+
+            if (AHPS_url) {
+                var AHPS_Data = dataCall(AHPS_url);
+                var AHPS_Count = AHPS_Data.documentElement.childElementCount;
+                var USGS_Data = dataCall(USGS_url);
+                var USGS_Count = USGS_Data.documentElement.childElementCount;
+
+                console.log(AHPS_url);
+                console.log(USGS_url);
+
+                console.log(AHPS_Data);
+                console.log(AHPS_Count);
+                console.log(USGS_Data);
+                console.log(USGS_Count);
+
+                //This is for AHPS Gauges
+                for (i = 0; i < AHPS_Count; i++) {
+                    var gaugeID = AHPS_Data.documentElement.children[i].attributes['GaugeLID'].value;
+                    var waterbody = AHPS_Data.documentElement.children[i].attributes['Waterbody'].value;
+                    var urlLink = AHPS_Data.documentElement.children[i].attributes['URL'].value;
+                    displayContent += '<tr><td>'+gaugeID +'</td><td>'+ waterbody + '</td><td><a href="'+urlLink+'" target="_blank">Go to Website</a></td></tr>';
+                    }
+
+                //This is for USGS Gauges
+                for (i = 0; i < USGS_Count; i++) {
+                    var gaugeID = USGS_Data.documentElement.children[i].attributes['SITE_NO'].value;
+                    var waterbody = USGS_Data.documentElement.children[i].attributes['STATION_NM'].value;
+                    var urlLink = USGS_Data.documentElement.children[i].attributes['NWISWEB'].value;
+                    displayContent += '<tr><td>'+gaugeID +'</td><td>'+ waterbody + '</td><td><a href="'+urlLink+'" target="_blank">Go to Website</a></td></tr>';
+                    }
+
+                    displayContent += '</table>';
+
+                $(element).popover({
+                'placement': 'top',
+                'html': true,
+                'content': displayContent
+                  });
+                $(element).popover('show');
+                };
+
+            if (USGS_url) {
+                var USGS_Data = dataCall(USGS_url);
+                var USGS_Count = USGS_Data.childElementCount;
+
+                console.log(USGS_url);
+
+                console.log(USGS_Data);
+                console.log(USGS_Count);
+
+                //This is for USGS Gauges
+                for (i = 0; i < USGS_Count; i++) {
+                    var gaugeID = USGS_Data.children[i].attributes['GaugeLID'].value;
+                    var waterbody = USGS_Data.children[i].attributes['Waterbody'].value;
+                    var urlLink = USGS_Data.children[i].attributes['URL'].value;
+                    displayContent += '<tr><td>'+gaugeID +'</td><td>'+ waterbody + '</td><td><a href="'+urlLink+'" target="_blank">Go to Website</a></td></tr>';
+                    }
+                };
+
+                    displayContent += '</table>';
+                $(element).popover({
+                'placement': 'top',
+                'html': true,
+                'content': displayContent
+                  });
+
+                $(element).popover('show');
+                console.log(displayContent);
+            }
+});
+/*
 map.on('singleclick', function(evt) {
     $(element).popover('destroy');
         if (map.getTargetElement().style.cursor == "pointer"){
@@ -86,6 +192,9 @@ map.on('singleclick', function(evt) {
         //      console.log(url)
         //      document.getElementById('popup').innerHTML = '<iframe src="' + url + '"></iframe>';
         //        var parser = new ol.format.GeoJSON();
+                var displayContent = '<table border="1"><tbody><tr><th>Gauge ID</th><th>Waterbody</th><th>Link</th></tr>';
+                console.log(displayContent);
+
                 $.ajax({
                   url: AHPS_url,
 //                  dataType: 'html'
@@ -105,7 +214,7 @@ map.on('singleclick', function(evt) {
 //                console.log(response.documentElement.children[0].attributes['GaugeLID'].value);
 
 //                var displayContent = "Gauge ID     Waterbody     Link\n";
-                var displayContent = '<table border="1"><tbody><tr><th>Gauge ID</th><th>Waterbody</th><th>Link</th></tr>'
+//                var displayContent = '<table border="1"><tbody><tr><th>Gauge ID</th><th>Waterbody</th><th>Link</th></tr>';
 
                 var xmlResponse = response.documentElement
                 var gaugesSelected = xmlResponse.childElementCount;
@@ -130,14 +239,14 @@ map.on('singleclick', function(evt) {
                   });
                 $(element).popover('show');
                 });
-
+                console.log(displayContent);
             }
             if (USGS_url){
 
             }
         }
     });
-
+*/
 
   map.on('pointermove', function(evt) {
     if (evt.dragging) {
