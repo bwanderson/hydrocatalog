@@ -75,27 +75,29 @@ map.on('singleclick', function(evt) {
 
             var view = map.getView();
             var viewResolution = view.getResolution();
-            var source = AHPS_Gauges.get('visible') ? AHPS_Gauges.getSource() : USGS_Gauges.getSource();
-            var url = source.getGetFeatureInfoUrl(evt.coordinate, viewResolution, view.getProjection(),
+//            var source = AHPS_Gauges.get('visible') ? AHPS_Gauges.getSource() : USGS_Gauges.getSource();
+//            var source = AHPS_Source;
+            var AHPS_url = AHPS_Source.getGetFeatureInfoUrl(evt.coordinate, viewResolution, view.getProjection(),
+              {'INFO_FORMAT': 'text/xml', 'FEATURE_COUNT': 50});
+            var USGS_url = USGS_Source.getGetFeatureInfoUrl(evt.coordinate, viewResolution, view.getProjection(),
               {'INFO_FORMAT': 'text/xml', 'FEATURE_COUNT': 50});
 
-                if (url) {
+            if (AHPS_url || USGS_url) {
         //      console.log(url)
         //      document.getElementById('popup').innerHTML = '<iframe src="' + url + '"></iframe>';
         //        var parser = new ol.format.GeoJSON();
                 $.ajax({
-                  url: url,
+                  url: AHPS_url,
 //                  dataType: 'html'
                 }).then(function(response) {
 //                console.log(response);
-
 //                The following 3 lines are to remove the included header if an html is returned
 //                var start = response.indexOf('<h5>');
 //                var end = response.indexOf('</h5>');
 //                response = response.substring(0,start-1)+response.substring(end+5)
 
 //                The following console.log commands were used in determining how to parse the returned XML
-//                console.log(response);
+                console.log(response);
 //                console.log(response.documentElement);
 //                console.log(response.documentElement.nodeName);
 //                console.log(response.documentElement.childElementCount);
@@ -108,6 +110,7 @@ map.on('singleclick', function(evt) {
                 var xmlResponse = response.documentElement
                 var gaugesSelected = xmlResponse.childElementCount;
 //                console.log(gaugesSelected);
+                //This is for AHPS Gauges
                 for (i = 0; i < gaugesSelected; i++) {
                     var gaugeID = xmlResponse.children[i].attributes['GaugeLID'].value;
                     var waterbody = xmlResponse.children[i].attributes['Waterbody'].value;
@@ -127,6 +130,10 @@ map.on('singleclick', function(evt) {
                   });
                 $(element).popover('show');
                 });
+
+            }
+            if (USGS_url){
+
             }
         }
     });
